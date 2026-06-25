@@ -480,29 +480,175 @@ Any deviation from that baseline becomes a strong candidate for further analysis
 
 ## Concept
 
----
+File ownership and permissions help determine who created, modified, or executed a file.
+
+Investigators often analyze ownership and permissions to identify suspicious activity.
+
 
 ## Attacker Perspective
 
----
+Attackers commonly upload files using compromised accounts such as www-data.
+
+They may also modify permissions to make payloads executable.
+
+Common targets include:
+
+- /tmp
+- /var/tmp
+- /dev/shm
 
 ## Investigator Perspective
 
+Investigators look for:
+
+- Files owned by suspicious users
+- Unexpected executable files
+- World-writable files
+- Recently modified files
+- Files located in writable directories
+
+Ownership and permission analysis can quickly reveal attacker-created artifacts.
+
 ---
 
-## Practical Validation
+# Practical Validation
 
-### Hypothesis
+## I. Hypothesis
 
-### Actions Performed
+I wanted to understand how investigators can identify suspicious files by analyzing ownership, permissions, special permission bits, and deviations from normal directory behavior.
 
-### Observations
+---
+
+## II. Practical 1 - Ownership Profiling
+
+### Task
+
+I wanted to identify files based on ownership and group ownership.
+
+### What I Did
+
+- Created multiple normal files owned by root.
+- Created multiple web files owned by www-data.
+- Created multiple suspicious files owned by nobody:nogroup.
+- Used file ownership as the hunting criteria.
+
+### What I Observed
+
+Different ownership categories immediately separated files into logical groups.
+
+Files owned by www-data could represent web server activity, while files owned by nobody:nogroup stood out from the normal dataset.
 
 ### Evidence
 
-### Analysis
+Step 1. - <img width="1166" height="383" alt="Screenshot 2026-06-25 at 8 03 06 PM" src="https://github.com/user-attachments/assets/fe4e9d35-36b2-4a39-9491-75d1e5891fe5" />
 
-### Key Takeaways
+
+Step 2. - <img width="750" height="644" alt="Screenshot 2026-06-25 at 8 03 19 PM" src="https://github.com/user-attachments/assets/e50a4f78-5281-433b-a400-96b6a74f682d" />
+
+
+Step 3. - <img width="1159" height="370" alt="Screenshot 2026-06-25 at 8 03 35 PM" src="https://github.com/user-attachments/assets/74e155ce-111b-42fb-aae6-dc5f9d968b11" />
+
+
+Step 4. - <img width="1322" height="460" alt="Screenshot 2026-06-25 at 8 03 52 PM" src="https://github.com/user-attachments/assets/219294b9-405f-4cb7-ae89-211db59561eb" />
+
+
+Step 5. - <img width="555" height="604" alt="Screenshot 2026-06-25 at 8 04 11 PM" src="https://github.com/user-attachments/assets/6de4c2fc-2246-4da3-8e22-47e8c081f6a4" />
+
+
+Step 6. - <img width="1321" height="541" alt="Screenshot 2026-06-25 at 8 04 43 PM" src="https://github.com/user-attachments/assets/29119be4-e62b-407e-9155-3e2d57fe8eab" />
+
+Step 7. - <img width="942" height="666" alt="Screenshot 2026-06-25 at 8 05 00 PM" src="https://github.com/user-attachments/assets/3f54e6b8-159d-40c4-8155-9170bf24b59c" />
+
+
+### What I Learned
+
+Ownership is an important hunting artifact because attackers often create or modify files using compromised service accounts.
+
+---
+
+## III. Practical 2 - Special Permission Hunting
+
+### Task
+
+I wanted to identify files with dangerous permission settings.
+
+### What I Did
+
+- Created normal files with standard permissions.
+- Created files containing SUID, SGID, and Sticky Bit permissions.
+- Used find commands to locate files with special permission bits.
+
+### What I Observed
+
+Normal files blended together.
+
+Files containing special permissions immediately became visible when filtering based on permission values.
+
+### Evidence
+
+Step 1. - <img width="436" height="634" alt="Screenshot 2026-06-25 at 8 06 51 PM" src="https://github.com/user-attachments/assets/8cb7112e-09b6-4cca-bc48-b640f6a8a082" />
+
+Step 2. - <img width="826" height="554" alt="Screenshot 2026-06-25 at 8 07 14 PM" src="https://github.com/user-attachments/assets/828459eb-6fcb-4c2f-8784-236e6655b329" />
+
+Step 3. - <img width="1003" height="353" alt="Screenshot 2026-06-25 at 8 07 44 PM" src="https://github.com/user-attachments/assets/3d4e3f1b-fea7-4d82-92e3-98df98ff87d2" />
+
+
+
+### What I Learned
+
+Special permission bits can introduce security risks and should always be reviewed during investigations.
+
+
+
+## V. Practical 3 - Baseline vs Anomaly Detection
+
+### Task
+
+I wanted to learn how investigators identify abnormal files by first understanding what is normal.
+
+### What I Did
+
+- Created 200 normal files.
+- Assigned the same owner, group, extension, and permissions.
+- Added one abnormal file.
+- Modified its owner, permissions, timestamp, and size.
+
+### What I Observed
+
+The abnormal file immediately stood out because it violated multiple baseline characteristics.
+
+The investigation became easier because I knew what normal behavior looked like.
+
+### Evidence
+
+Step 1. - <img width="663" height="365" alt="Screenshot 2026-06-25 at 8 08 14 PM" src="https://github.com/user-attachments/assets/619ef783-6f54-4025-868a-490686e324e0" />
+
+Step 2. - <img width="572" height="551" alt="Screenshot 2026-06-25 at 8 08 35 PM" src="https://github.com/user-attachments/assets/53aea113-f05c-4d54-a2c3-285ed6a0c94f" />
+
+Step 3. - <img width="541" height="594" alt="Screenshot 2026-06-25 at 8 08 54 PM" src="https://github.com/user-attachments/assets/55a594c7-3ae4-405e-976d-c596c27db931" />
+
+### What I Learned
+
+Investigators rarely start by looking for malware.
+
+They first establish a baseline and then identify anything that breaks that baseline.
+
+---
+
+## Overall Learning
+
+Ownership and permissions provide valuable forensic artifacts.
+
+During investigations I can:
+
+- Hunt files owned by compromised accounts.
+- Hunt files owned by suspicious groups.
+- Identify SUID, SGID, and Sticky Bit files.
+- Detect unusual permissions.
+- Detect abnormal ownership.
+- Build a baseline and locate anomalies quickly.
+
+These techniques help investigators identify suspicious files even when the file name itself appears normal.
 
 ---
 
