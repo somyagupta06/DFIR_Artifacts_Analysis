@@ -652,36 +652,314 @@ These techniques help investigators identify suspicious files even when the file
 
 ---
 
-# Topic 04 — Metadata
+# Topic 04 — Users and Groups
 
 ## Concept
+
+Linux stores information about users, groups, login activity, and privileges. During a forensic investigation, these artifacts help identify unauthorized accounts, privilege escalation, persistence mechanisms, and suspicious user activity. Investigating users and groups also helps reconstruct how an attacker accessed and interacted with the system.
 
 ---
 
 ## Attacker Perspective
 
+After gaining access, an attacker may create new user accounts, modify existing accounts, assign UID 0, add users to privileged groups such as sudo or shadow, change login shells, or modify sudo privileges to maintain persistent access. These changes allow the attacker to regain access even after the initial vulnerability has been fixed.
+
 ---
 
 ## Investigator Perspective
 
+An investigator should enumerate all users and groups, review privileged accounts, identify duplicate UID 0 accounts, verify login shell configurations, inspect group memberships, analyze authentication logs, review successful and failed login attempts, and investigate sudo activity. These artifacts help detect persistence, privilege escalation, and reconstruct the attack timeline.
+
 ---
 
-## Practical Validation
+# Practical Validation
 
-### Hypothesis
+## I. Hypothesis
 
-### Actions Performed
+I wanted to understand how investigators can identify unauthorized or suspicious user accounts by analyzing user IDs (UIDs), login shells, and account information stored in the Linux authentication database.
 
-### Observations
+---
+
+## II. Practical 1 - User Enumeration & UID 0 Backdoor Detection
+
+### Task
+
+I wanted to investigate Linux user accounts and determine whether an attacker had created a hidden backdoor account with root privileges.
+
+### What I Did
+
+* Enumerated all user accounts from the system.
+* Reviewed the contents of the user account database.
+* Created multiple user accounts for analysis.
+* Modified one user account to use UID 0.
+* Compared user IDs to identify duplicate root-level accounts.
+* Reviewed login shell configurations for all users.
+* Reviewed login shell assignments for all users.
+* Compared interactive and non-interactive shells.
+* Modified a user's login shell.
+* Investigated accounts configured with `/usr/sbin/nologin`.
+* Compared service accounts with normal user accounts.
+
+### What I Observed
+
+The system contained multiple user accounts with different UIDs.
+
+After assigning UID 0 to a non-root account, the account obtained root-level privileges despite having a different username.
+
+Filtering accounts by UID immediately revealed the hidden privileged account.
+
+Reviewing login shells also helped distinguish normal service accounts from interactive user accounts.
+
+Most service accounts used non-interactive shells, preventing direct login.
+
+After modifying a normal user's shell, the account behaved differently from other users.
+
+Abnormal shell assignments became easier to identify by comparing all users against the system baseline.
+
 
 ### Evidence
 
-### Analysis
+Step 1. - <img width="1119" height="296" alt="Screenshot 2026-06-27 at 4 52 44 PM" src="https://github.com/user-attachments/assets/9ab86e4c-9b03-4e17-abb2-00105571dc11" />
 
-### Key Takeaways
+Step 2. - <img width="574" height="293" alt="Screenshot 2026-06-27 at 4 53 06 PM" src="https://github.com/user-attachments/assets/c123055d-cd35-4736-b0fe-db68efbda630" />
+
+Step 3. - <img width="1150" height="563" alt="Screenshot 2026-06-27 at 4 53 24 PM" src="https://github.com/user-attachments/assets/8194dff6-ee1a-4373-ac97-902178175a0a" />
+
+Step 4. - <img width="1038" height="261" alt="Screenshot 2026-06-27 at 4 53 51 PM" src="https://github.com/user-attachments/assets/2d10f8db-d74c-4d58-8bec-ca9b5d9ff688" />
+
+Step 5. - <img width="1262" height="158" alt="Screenshot 2026-06-27 at 4 54 21 PM" src="https://github.com/user-attachments/assets/45ee5964-c17e-4396-9b96-15172280aad3" />
+
+Step 6. - <img width="675" height="522" alt="Screenshot 2026-06-27 at 4 54 39 PM" src="https://github.com/user-attachments/assets/66c69b84-0603-40f0-b162-06a953aa43d0" />
+
+Step 7. - <img width="828" height="524" alt="Screenshot 2026-06-27 at 4 55 04 PM" src="https://github.com/user-attachments/assets/f261094c-2516-428e-b68c-3def78ecf95b" />
+
+
+### What I Learned
+
+Linux privileges are determined by the User ID (UID), not by the username.
+
+Any account assigned UID 0 effectively becomes a root account, making duplicate UID detection an important forensic technique during incident response.
 
 ---
 
+
+
+## Overall Learning
+
+During this practical I learned how investigators analyze Linux user accounts without relying solely on usernames.
+
+I can now:
+
+* Enumerate Linux user accounts.
+* Detect duplicate UID 0 accounts.
+* Identify hidden root backdoor accounts.
+* Analyze login shell configurations.
+* Differentiate service accounts from interactive users.
+* Identify suspicious account modifications.
+
+These techniques help investigators quickly identify unauthorized accounts and privilege escalation mechanisms during Linux forensic investigations.
+
+
+
+---
+
+## IV. Practical 3 - Group Membership Investigation
+
+### Task
+
+I wanted to investigate Linux groups and determine whether an attacker had added users to privileged groups for persistence or privilege escalation.
+
+### What I Did
+
+* Reviewed all system groups.
+* Examined the contents of the group database.
+* Added users to different groups for analysis.
+* Added one user to the **root** group.
+* Added another user to the **shadow** group.
+* Enumerated user group memberships.
+* Reviewed members of specific privileged groups.
+
+### What I Observed
+
+Most users belonged only to their default groups.
+
+After modifying group memberships, the affected users immediately appeared inside privileged groups.
+
+Users added to the **root** and **shadow** groups stood out during investigation because these groups provide elevated capabilities that normal users should not possess.
+
+### Evidence
+
+Step 1. - <img width="290" height="196" alt="Screenshot 2026-06-27 at 5 04 12 PM" src="https://github.com/user-attachments/assets/7ef19bf0-c4b0-4c07-b657-3aadcbfdc432" />
+
+Step 2. - <img width="432" height="499" alt="Screenshot 2026-06-27 at 5 04 36 PM" src="https://github.com/user-attachments/assets/8a9620ef-e611-4e72-a99f-807a348762b1" />
+
+Step 3. - <img width="507" height="282" alt="Screenshot 2026-06-27 at 5 04 52 PM" src="https://github.com/user-attachments/assets/b7a0b274-20d1-44cc-88fd-b2844dd36627" />
+
+### What I Learned
+
+Group memberships are an important forensic artifact.
+
+Attackers may abuse privileged groups instead of directly modifying permissions because group membership provides elevated access while appearing less suspicious.
+
+---
+
+## Overall Learning
+
+During this practical I learned how investigators identify privilege escalation through Linux groups.
+
+I can now:
+
+* Enumerate Linux groups.
+* Review group memberships.
+* Identify privileged groups.
+* Detect unauthorized group assignments.
+* Investigate privilege escalation through group membership.
+
+These techniques help investigators identify compromised accounts that have been granted additional privileges.
+
+
+---
+
+
+## V. Practical 4 - Authentication Investigation
+
+### Task
+
+I wanted to investigate authentication artifacts generated during normal and malicious user activity.
+
+### What I Did
+
+* Generated successful SSH logins.
+* Generated failed SSH login attempts.
+* Attempted logins using an invalid username.
+* Switched users using `su`.
+* Executed privileged commands using `sudo`.
+* Reviewed authentication logs.
+* Examined login history.
+* Reviewed failed login history.
+
+### What I Observed
+
+Successful SSH logins recorded the username, source IP address, login time, and session information.
+
+Failed login attempts generated authentication failure events.
+
+Attempts using invalid usernames were also recorded separately.
+
+User switching (`su`) and privileged command execution (`sudo`) generated dedicated log entries, allowing the entire authentication timeline to be reconstructed.
+
+### Evidence
+
+Step 1. - <img width="1255" height="502" alt="Screenshot 2026-06-27 at 4 57 41 PM" src="https://github.com/user-attachments/assets/d4b54100-6f15-4ad8-bdd3-559600eef760" />
+
+Step 2. - <img width="1313" height="414" alt="Screenshot 2026-06-27 at 4 58 06 PM" src="https://github.com/user-attachments/assets/6b922b00-bf6b-4aa1-813b-6d109a2587d9" />
+
+Step 3. - <img width="1201" height="315" alt="Screenshot 2026-06-27 at 4 58 28 PM" src="https://github.com/user-attachments/assets/9e45f5cb-3588-4ac9-9fd9-4a507f3f3549" />
+
+Step 4. - <img width="1087" height="519" alt="Screenshot 2026-06-27 at 4 58 52 PM" src="https://github.com/user-attachments/assets/43c0524b-8693-44bc-ac4e-f8eee9cafcc3" />
+
+Step 5. - <img width="1214" height="336" alt="Screenshot 2026-06-27 at 4 59 09 PM" src="https://github.com/user-attachments/assets/79fdb5cd-6fcf-412c-af6f-b9535db3af11" />
+
+Step 6. - <img width="1092" height="522" alt="Screenshot 2026-06-27 at 4 59 31 PM" src="https://github.com/user-attachments/assets/5e2832f6-8fad-4ae2-afbc-540d49dacd0d" />
+
+Step 7. - <img width="1082" height="531" alt="Screenshot 2026-06-27 at 4 59 52 PM" src="https://github.com/user-attachments/assets/333302df-fa87-4a82-84ee-ac0604e08f35" />
+
+Step 8. - <img width="1317" height="427" alt="Screenshot 2026-06-27 at 5 00 12 PM" src="https://github.com/user-attachments/assets/3573c7eb-5a8a-4fef-8a79-315572f254f2" />
+
+Step 9. - <img width="1287" height="367" alt="Screenshot 2026-06-27 at 5 00 28 PM" src="https://github.com/user-attachments/assets/91688844-6ea5-4a42-a903-2b3aeda3fd38" />
+
+Step 10. - <img width="1331" height="588" alt="Screenshot 2026-06-27 at 5 00 50 PM" src="https://github.com/user-attachments/assets/c78554eb-cb74-4147-a67a-d6a15ab43620" />
+ 
+Step 11. - <img width="1285" height="623" alt="Screenshot 2026-06-27 at 5 01 07 PM" src="https://github.com/user-attachments/assets/23b3101e-8db4-4f66-afa4-380b442e6b33" />
+
+Step 12. - <img width="1094" height="460" alt="Screenshot 2026-06-27 at 5 01 23 PM" src="https://github.com/user-attachments/assets/ed1f4522-a2c8-480e-9bd0-efb16ec46945" />
+
+Step 13. - <img width="1120" height="143" alt="Screenshot 2026-06-27 at 5 01 45 PM" src="https://github.com/user-attachments/assets/5fab574d-31c1-4e5c-8be0-89750827efce" />
+
+Step 14. - <img width="1248" height="347" alt="Screenshot 2026-06-27 at 5 02 01 PM" src="https://github.com/user-attachments/assets/f1d646ba-70cf-487c-8925-605f3c888075" />
+
+Step 15. - <img width="1085" height="527" alt="Screenshot 2026-06-27 at 5 02 19 PM" src="https://github.com/user-attachments/assets/7b266a92-67ab-4ab3-9ecb-e7fbf3fdf54c" />
+
+
+### What I Learned
+
+Authentication artifacts preserve valuable evidence during incident response.
+
+Successful logins, failed logins, privilege escalation events, and user switching collectively help investigators reconstruct attacker activity and identify suspicious behavior.
+
+---
+
+## Overall Learning
+
+During this practical I learned how Linux records authentication events.
+
+I can now:
+
+* Investigate successful SSH logins.
+* Investigate failed authentication attempts.
+* Detect brute-force activity.
+* Identify invalid username attacks.
+* Analyze `su` activity.
+* Analyze `sudo` usage.
+* Reconstruct authentication timelines.
+
+These artifacts are essential during Linux forensic investigations because they reveal who accessed the system, when they logged in, and what privileged actions they performed.
+
+
+---
+
+## VI. Practical 5 - Current Session Investigation
+
+### Task
+
+I wanted to investigate active user sessions on a running Linux system.
+
+### What I Did
+
+* Established remote SSH sessions.
+* Logged in using multiple user accounts.
+* Created simultaneous active sessions.
+* Reviewed currently logged-in users.
+* Examined active terminals and remote connections.
+
+### What I Observed
+
+Each active session displayed the username, terminal, login time, and source IP address.
+
+Multiple simultaneous sessions became immediately visible.
+
+Active session information allows investigators to quickly determine who is currently using the system and whether any unexpected users are present.
+
+### Evidence
+
+Step 1. - <img width="714" height="699" alt="Screenshot 2026-06-27 at 5 02 56 PM" src="https://github.com/user-attachments/assets/89d22e57-bf14-4cc6-85b0-8a77322f0c6a" />
+
+Step 2. - <img width="1205" height="248" alt="Screenshot 2026-06-27 at 5 03 12 PM" src="https://github.com/user-attachments/assets/0476aed5-9527-4ad3-8da6-d9e070fb2a52" />
+
+
+### What I Learned
+
+Live response provides immediate visibility into current system usage.
+
+Unexpected users, unfamiliar source IP addresses, or unauthorized active sessions may indicate an ongoing compromise that requires immediate investigation.
+
+---
+
+## Overall Learning
+
+During this practical I learned how investigators analyze active Linux sessions.
+
+I can now:
+
+* Identify currently logged-in users.
+* Review active terminals.
+* Identify remote SSH sessions.
+* Verify source IP addresses.
+* Detect unauthorized active sessions.
+
+These techniques help investigators rapidly assess whether a compromised system is still being actively accessed by an attacker.
+
+---
 # Topic 05 — Checksums
 
 ## Concept
